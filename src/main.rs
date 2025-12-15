@@ -1,4 +1,5 @@
 use std::{
+    fs,                            // File system operations
     io::{BufReader, prelude::*}, // Importing the necessary traits for reading and writing to the TCP stream
     net::{TcpListener, TcpStream}, // Transmission Control Protocol (link between two devices)
 };
@@ -21,5 +22,21 @@ fn handle_connection(mut stream: TcpStream) {
         .take_while(|line| !line.is_empty())
         .collect();
 
-    println!("Request: {http_request:#?}");
+    /*
+        HTTP is a text-based protocol, and a request takes this format:
+
+        Method Request-URI HTTP-Version CRLF
+        headers CRLF (carriage return and line feed)
+        message-body
+    */
+
+    let status_line = "HTTP/1.1 200 OK";
+    let contents = fs::read_to_string("index.html").unwrap();
+    let length = contents.len();
+
+    let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}"); // HTTP response with status code 200 OK
+    //                                                                                               'Success message’s data'
+    stream.write_all(response.as_bytes()).unwrap(); // 'as_bytes on our response to convert the string data to bytes. 
+    //                                                      The write_all method on stream takes a &[u8] and sends those
+    //                                                      bytes directly down the connection'
 }
