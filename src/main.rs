@@ -16,11 +16,7 @@ fn main() {
 
 fn handle_connection(mut stream: TcpStream) {
     let buf_reader = BufReader::new(&stream);
-    let http_request: Vec<_> = buf_reader // Reading the HTTP request from the stream from client 2 server
-        .lines()
-        .map(|result| result.unwrap())
-        .take_while(|line| !line.is_empty())
-        .collect();
+    let request_line = buf_reader.lines().next().unwrap().unwrap(); // Reading the first line of the HTTP request
 
     /*
         HTTP is a text-based protocol, and a request takes this format:
@@ -30,13 +26,19 @@ fn handle_connection(mut stream: TcpStream) {
         message-body
     */
 
-    let status_line = "HTTP/1.1 200 OK";
-    let contents = fs::read_to_string("index.html").unwrap();
-    let length = contents.len();
+    let (status_line, filename) = if request_line == "GET / HTTP/1.1" {
+        ("HTTP/1.1 200 OK", "index.html")
+    } else {
+        ("HTTP/1.1 404 NOT FOUND", "404.html")
+    };
 
+    let contents: String = fs::read_to_string(filename).unwrap(); // Reading the content of the requested file  
+    let length = contents.len(); // Getting the length of the file content
+ 
     let response = format!("{status_line}\r\nContent-Length: {length}\r\n\r\n{contents}"); // HTTP response with status code 200 OK
-    //                                                                                               'Success message’s data'
-    stream.write_all(response.as_bytes()).unwrap(); // 'as_bytes on our response to convert the string data to bytes. 
+    //                                                                                                'Success message’s data'
+    stream.write_all(response.as_bytes()).unwrap(); // Sending the response back to the client
+    //                                                      'as_bytes on our response to convert the string data to bytes.
     //                                                      The write_all method on stream takes a &[u8] and sends those
     //                                                      bytes directly down the connection'
 }
